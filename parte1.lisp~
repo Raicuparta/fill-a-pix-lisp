@@ -1,0 +1,26 @@
+;; Grupo 62: 73639 Ricardo Lopes, 75646 Nuno Gomes, 76031 Leonor Bandeira
+
+
+(defstruct restriction variables pred)
+
+(defun cria-restricao (vars p)
+  (make-restriction :variables vars :pred p)
+)
+
+(defun restricao-variaveis (r)
+  (restriction-variables r)
+)
+
+(defun restricao-funcao-validacao (r)
+  (restriction-pred r)
+)
+
+
+
+(defstruct psr variables domains restrictions atributions)
+
+(defun cria-psr (vars doms restricts)
+  (make-psr :variables vars :domains doms :restrictions restricts :atributions NIL)
+)
+
+(defun psr-atribuicoes 
