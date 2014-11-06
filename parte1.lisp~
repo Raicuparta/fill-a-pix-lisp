@@ -111,11 +111,13 @@
 (defun psr-consistente-p (psr)
 	(let((l1 (psr-restrictions psr))
 		(i 0)
-		(j T))
+		(j T)
+		(valido NIL))
 		(dolist (el l1)
-			(incf i)
-			(cond( (funcall(restricao-funcao-validacao el) psr))
-				(T (setf j NIL) (return (values j i)))))
+			(setf valido (funcall(restricao-funcao-validacao el) psr))
+			(cond( (eq valido 1) )
+				((eq valido T) (incf i))
+				(T (setf j NIL) (incf i) (return (values j i)))))
 		
 		(values j i)))
 		
@@ -166,9 +168,15 @@
 
 ;recebe um psr e uma lista de adjacencias e conta as posicoes pintadas
 (defun conta-pintados (psr l)
-	(let ((i 0))
+	(let ((i 0) (j 0) (value 0))
 		(dolist (el l)
-			(setf i(+ i (psr-variavel-valor psr el)))) i))		
+			(setf value (psr-variavel-valor psr el))
+			(if (eq value NIL) (setf j(1+ j )) (setf i(+ i value))) 
+			
+		)
+		(list i j)
+	)
+)		
 		
 		
 		
@@ -184,19 +192,21 @@
 		(dom NIL)
 		(pred NIL)
 		(l1 NIL)
+		(int 0)
 		(restricoes NIL))
 		(dotimes (l linhas)
 			(dotimes (c colunas)
 				(setf pos (concatenate 'string (write-to-string l) "_" (write-to-string c)))
 				(setf dom (append dom (list (list 0 1))))
 				(setf vars (append vars (list pos)))
-				(setf l1 (funcall lista-adjacencias pos linhas colunas))
-				(setf pred #'(lambda (psr) (let ((x (funcall conta-pintados psr l1)) (y (aref arr l c))) (eq x y))))
+				(setf l1 (lista-adjacencias pos linhas colunas))
+				(setf int (aref arr l c))
+				(setf pred (cria-predicado int l1))
 				(setf restricoes 
 					(append restricoes 
 						(list(cria-restricao 
 							(list pos)
-							(funcall pred))
+							pred)
 						)
 					)
 				)
@@ -207,6 +217,12 @@
 	)
 )
 
+
+(defun cria-predicado (n l) 
+	(let ((l1 l) (int n))
+	#'(lambda (psr) (let ((x (conta-pintados psr l1)) (y int)) (if (null y) 1 (and (<= (- y (nth 0 x)) (nth 1 x)) (<= (nth 0 x) y))) ))
+	)
+)
 
 
 (defun posicao-divide (string)
