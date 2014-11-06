@@ -148,32 +148,71 @@
 		(setf x (values (psr-consistente-p newpsr)))
 		(setf y (nth-value 1 (psr-consistente-p newpsr)))
 		(values x y)))
+
+;recebe uma posicao e o tamanho do tabuleiro, devolve uma lista com todos os adjacentes
+;o argumento posicao esta no formato "linha_coluna"
+(defun lista-adjacencias (posicao linhas colunas)
+	(let ((l (parse-integer (nth 0 (posicao-divide posicao))))
+		  (c (parse-integer (nth 1 (posicao-divide posicao))))
+		  (lista NIL)
+		  (newl NIL)
+		  (newc NIL))
+		  (dotimes (i 3)
+			(dotimes (j 3)
+				(setf newl (+ l(1- i)))
+				(setf newc (+ c(1- j)))
+				(if (and (>= newl 0) (< newl linhas) (>= newc 0) (< newc colunas)) 
+						(setf lista (append lista (list (concatenate 'string (write-to-string newl) "_" (write-to-string newc)))))))) lista ))
+
+;recebe um psr e uma lista de adjacencias e conta as posicoes pintadas
+(defun conta-pintados (psr l)
+	(let ((i 0))
+		(dolist (el l)
+			(setf i(+ i (psr-variavel-valor psr el)))) i))		
 		
-(defun fill-a-pix->psr (array)
+		
+		
+		
+		
+(defun fill-a-pix->psr (arr)
 	(let (
-		(linhas (array-dimension array 0))
-		(colunas (array-dimension array 1))
-		(psr NIL)
+		(linhas (array-dimension arr 0))
+		(colunas (array-dimension arr  1))
+		(novo-psr NIL)
+		(pos NIL)
+		(vars NIL)
+		(dom NIL)
+		(pred NIL)
+		(l1 NIL)
 		(restricoes NIL))
-		 
-		(dotimes (y colunas)
-			(dotimes (x linhas)
-				
-				;(print x) (prin1 y) (prin1 (aref array x y))
-				(setf restricoes (append restricoes 
-					(cria-restricao 
-						(lista-adjacencias (write-to-string(x)) (write-to-string(y)) ) 
-						(#'lambda())
-					
-					))
+		(dotimes (l linhas)
+			(dotimes (c colunas)
+				(setf pos (concatenate 'string (write-to-string l) "_" (write-to-string c)))
+				(setf dom (append dom (list (list 0 1))))
+				(setf vars (append vars (list pos)))
+				(setf l1 (funcall lista-adjacencias pos linhas colunas))
+				(setf pred #'(lambda (psr) (let ((x (funcall conta-pintados psr l1)) (y (aref arr l c))) (eq x y))))
+				(setf restricoes 
+					(append restricoes 
+						(list(cria-restricao 
+							(list pos)
+							(funcall pred))
+						)
+					)
+				)
 			)
 		)
+		(setf novo-psr (cria-psr vars dom restricoes))
+		novo-psr
 	)
 )
 
-;recebe uma variavel e o tamanho do tabuleiro, devolve uma lista com todos os adjacentes
-(defun lista-adjacencias (var linhas colunas)
 
 
+(defun posicao-divide (string)
+	(loop for start = 0 then (1+ finish)
+        for finish = (position #\_ string :start start)
+        collecting (subseq string start finish)
+        until (null finish)
+    )
 )
-		
