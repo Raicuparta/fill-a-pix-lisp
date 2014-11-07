@@ -44,22 +44,32 @@
 
 (defun psr-variavel-valor (psr var)
 	(let ((value NIL)
-		(i 0)
 		(l2 (psr-atributionValue psr)) 
 		(l3 (psr-atributionVar psr)))
-		(dolist (el l3)
-			(cond ((string= var el) (setf value (nth i l2)) (return 0))
-				(T (incf i)))) value))
+
+
+	(loop for el3 in l3
+		for el2 in l2 do
+		(cond ((string= var el3) (setf value el2) (return 0)))
+	) value)
+)
+
+		;(dolist (el l3)
+		;	(cond ((string= var el) (setf value (nth i l2)) (return 0))
+		;		(T (incf i)))) value))
 				
 
 (defun psr-variavel-dominio (psr var)
 	(let ((d NIL)
-		(i 0)
 		(l2 (psr-variaveis-todas psr)) 
 		(l3 (psr-domains psr)))
-		(dolist (el l2)
-			(cond ((string= var el) (setf d (nth i l3)) (return 0))
-				(T (incf i)))) d))				
+		
+		(loop for el2 in l2
+		for el3 in l3 do
+			(cond ((string= var el2) (setf d el3) (return 0)))
+		) d)
+
+)				
 
 (defun psr-variavel-restricoes (psr var)
 	(let ((r NIL)
@@ -70,12 +80,22 @@
 			
 
 (defun psr-adiciona-atribuicao! (psr var value)
-	(let ( (l1 (psr-atributionVar psr))
-		(i 0)
+	(let ( 
+		(l1 (psr-atributionVar psr))
+		(l2 (psr-atributionValue psr))
 		(j NIL))
-		(dolist (el l1)
-				(cond ((string= var el) (setf (nth i (psr-atributionValue psr)) value) (setf j T) (return 0))
-					(T (incf i))))
+		;(dolist (el l1)
+		;		(cond ((string= var el) (setf (nth i (psr-atributionValue psr)) value) (setf j T) (return 0))
+		;			(T (incf i))))
+
+
+
+		(loop for el1 in l1
+			for el2 in l2 do
+				(cond ((string= var el1) (setf el2 value) (setf j T) (return 0)))
+		)
+
+
 		(cond ((not j) (setf (psr-atributionVar psr) (append (psr-atributionVar psr) (list var))) 
 						(setf (psr-atributionValue psr) (append (psr-atributionValue psr) (list value)))
 						) ) NIL))
@@ -97,11 +117,17 @@
 		
 		
 (defun psr-altera-dominio! (psr var dom)
-	(let ((i 0)
-		(l1 (psr-variaveis-todas psr)))
-		(dolist (el l1)
-			(cond ((string= var el)(setf (nth i (psr-domains psr)) dom) (return 0))
-				(T (incf i)))) NIL))
+	(let (
+		(l1 (psr-variaveis-todas psr))
+		(l2 (psr-domains psr)))
+
+		(loop for el1 in l1
+			for el2 in l2 do
+				(cond ((string= var el1) (setf el2 dom) (return 0)))
+		)
+
+	NIL)
+)
 				
 
 (defun psr-completo-p (psr)
@@ -214,17 +240,24 @@
 				(setf pos (concatenate 'string (write-to-string l) "_" (write-to-string c)))
 				(setf dom (append dom (list (list 0 1))))
 				(setf vars (append vars (list pos)))
-				(setf l1 (lista-adjacencias pos linhas colunas))
 				(setf int (aref arr l c))
-				(setf pred (cria-predicado int l1))
-				(setf restricoes 
-					(append restricoes 
-						(list(cria-restricao 
-							(list pos)
-							pred)
+
+				(unless(null int) 
+						(setf l1 (lista-adjacencias pos linhas colunas))
+						(setf pred (cria-predicado int l1))
+						(setf restricoes 
+							(append restricoes 
+								(list(cria-restricao 
+									(list pos)
+									pred)
+								)
+							)
 						)
+
+
 					)
-				)
+		
+
 			)
 		)
 		(setf novo-psr (cria-psr vars dom restricoes))
@@ -239,7 +272,6 @@
 	)
 )
 
-
 (defun posicao-divide (string)
 	(loop for start = 0 then (1+ finish)
         for finish = (position #\_ string :start start)
@@ -247,7 +279,6 @@
         until (null finish)
     )
 )
-
 
 (defun psr->fill-a-pix (psr linhas colunas)
 	(let ((posicoes (psr-atributionVar psr))
@@ -264,26 +295,27 @@
 				
 				
 (defun procura-retrocesso-simples (psr)
-	(let ((var NIL) (r-testes 0) (testes 0) (testes-atr NIL) (testes-psr NIL) (consistente-atr NIL) (consistente-psr NIL)(resultado NIL) (lista NIL))
+	(let ((var NIL) (r-testes 0) (retorno-atr NIL) (retorno-psr NIL) (testes 0) (testes-atr NIL) (testes-psr NIL) (consistente-atr NIL) (consistente-psr NIL)(resultado NIL) (lista NIL))
 	(cond ( (psr-completo-p psr) (return-from procura-retrocesso-simples (values psr testes)))
 		  (T (setf var (first (psr-variaveis-nao-atribuidas psr)))))
 	(dolist (val (psr-variavel-dominio psr var))
-		(setf consistente-atr (values (psr-atribuicao-consistente-p psr var val)))
-		(setf testes-atr (nth-value 1 (psr-atribuicao-consistente-p psr var val)))
+		(setf retorno-atr (multiple-value-bind (resultado testes) (psr-atribuicao-consistente-p psr var val) (list resultado testes)))
+		(setf consistente-atr (nth 0 retorno-atr))
+		(setf testes-atr (nth 1 retorno-atr))
 		(setf testes (+ testes testes-atr))
-		;(print testes) (prin1 "primeiro")
 		(cond (consistente-atr 
 					(psr-adiciona-atribuicao! psr var val)
 					(setf lista (multiple-value-bind (resultado r-testes) (procura-retrocesso-simples psr)(list resultado r-testes)) )
-					;(print (nth-value 1 resultado)) (prin1 "estupida")
 					(setf resultado (nth 0 lista))
 					(setf r-testes (nth 1 lista))
 					(setf testes (+ testes r-testes))
-					(cond ((null resultado) (setf consistente-psr NIL)(setf testes-psr 0)) 
-						  (T (setf consistente-psr (values (psr-consistente-p resultado)))
-							 (setf testes-psr (nth-value 1 (psr-consistente-p resultado)))))
-					;(setf testes (+ testes testes-psr))
-					;(print testes) (prin1 "segundo")
+					(cond ((null resultado) (setf consistente-psr NIL)(setf testes-psr 0))
+						  (T 
+						  	 (setf retorno-psr (multiple-value-bind (resultado testes) (psr-consistente-p resultado) (list resultado testes)))
+							 (setf consistente-psr (nth 0 retorno-psr))
+							 (setf testes-psr (nth 1 retorno-psr))
+
+							 ))
 					(cond (consistente-psr (return-from procura-retrocesso-simples(values resultado testes)))
 						  (T (psr-remove-atribuicao! psr var))
 					))
@@ -292,3 +324,9 @@
 	(values NIL testes)
 	)
 )
+
+(defun resolve-simples (arr)
+	(let ( (psr NIL) (newpsr NIL) (newarr NIL))
+		(setf psr (fill-a-pix->psr arr ))
+		(setf newpsr (procura-retrocesso-simples psr))
+		(setf newarr (psr->fill-a-pix newpsr (array-dimension arr 0)(array-dimension arr 1)))))
