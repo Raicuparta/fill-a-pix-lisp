@@ -76,7 +76,7 @@
 		(l-todas-restric (psr-restrictions psr)))
 		(dolist (restric l-todas-restric)
 			(dolist (restric-var (restricao-variaveis restric))
-				(cond((string= var restric-var) (setf l-restric (append l-restric (list restric))))))) r))
+				(cond((string= var restric-var) (setf l-restric (append l-restric (list restric))))))) l-restric))
 			
 
 (defun psr-adiciona-atribuicao! (psr var value)
@@ -104,11 +104,11 @@
 							
 (defun psr-altera-dominio! (psr var dom)
 	(let ((i 0)
-		(l1 (psr-variaveis-todas psr))
-		(l2 (psr-domains psr)))
+		(l-vars (psr-variaveis-todas psr))
+		(l-doms (psr-domains psr)))
 
-		(dolist (el l1)
-				(cond ((string= var el) (setf (nth i l2) dom) (return 0))
+		(dolist (v l-vars)
+				(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
 					(T (incf i))))
 	NIL)
 )
@@ -119,12 +119,12 @@
 		(T NIL)))
 
 (defun psr-consistente-p (psr)
-	(let((l1 (psr-restrictions psr))
+	(let((l-restric (psr-restrictions psr))
 		(i 0)
 		(j T)
 		(valido NIL))
-		(dolist (el l1)
-			(setf valido (funcall(restricao-funcao-validacao el) psr))
+		(dolist (restric l-restric)
+			(setf valido (funcall(restricao-funcao-validacao restric) psr))
 			(cond( (eq valido 1))
 				((eq valido T) (incf i))
 				(T (setf j NIL) (incf i) (return (values j i)))))
@@ -133,33 +133,33 @@
 		
 
 (defun psr-variavel-consistente-p (psr var)
-	(let ((l1 (psr-variavel-restricoes psr var))
+	(let ((l-restric (psr-variavel-restricoes psr var))
 		(i 0)
 		(j T))
-		(dolist (el l1)
+		(dolist (restric l-restric)
 		(incf i)
-			(cond( (funcall(restricao-funcao-validacao el) psr))
+			(cond( (funcall(restricao-funcao-validacao restric) psr))
 					(T (setf j NIL) (return (values j i)))))
 		
 		(values j i)))
 		
 (defun psr-atribuicao-consistente-p (psr var val)
-	(let ( (x NIL) (y NIL) (oldval (psr-variavel-valor psr var)))
+	(let ( (i NIL) (j NIL) (oldval (psr-variavel-valor psr var)))
 		(psr-adiciona-atribuicao! psr var val)
-		(setf x (values (psr-variavel-consistente-p psr var)))
-		(setf y (nth-value 1 (psr-variavel-consistente-p psr var)))
+		(setf i (values (psr-variavel-consistente-p psr var)))
+		(setf j (nth-value 1 (psr-variavel-consistente-p psr var)))
 		(cond ( (null oldval) (psr-remove-atribuicao! psr var) )
-			(T (psr-adiciona-atribuicao! psr var oldval))) (values x y)))		  
+			(T (psr-adiciona-atribuicao! psr var oldval))) (values i j)))		  
 
 (defun psr-atribuicoes-consistentes-arco-p (psr var1 val1 var2 val2)
-	(let ((l1 NIL) (x NIL) (y NIL) (newpsr NIL))
-		(setf l1 (intersection (psr-variavel-restricoes psr var1) (psr-variavel-restricoes psr var2)))
-		(setf newpsr (cria-psr (list var1 var2) (list (list val1) (list val2)) l1))
+	(let ((l-restric NIL) (i NIL) (j NIL) (newpsr NIL))
+		(setf l-restric (intersection (psr-variavel-restricoes psr var1) (psr-variavel-restricoes psr var2)))
+		(setf newpsr (cria-psr (list var1 var2) (list (list val1) (list val2)) l-restric))
 		(psr-adiciona-atribuicao! newpsr var1 val1)
 		(psr-adiciona-atribuicao! newpsr var2 val2)
-		(setf x (values (psr-consistente-p newpsr)))
-		(setf y (nth-value 1 (psr-consistente-p newpsr)))
-		(values x y)))
+		(setf i (values (psr-consistente-p newpsr)))
+		(setf j (nth-value 1 (psr-consistente-p newpsr)))
+		(values i j)))
 
 		
 ;###########################################################################
@@ -175,23 +175,23 @@
 		(vars NIL)
 		(dom NIL)
 		(pred NIL)
-		(l1 NIL)
-		(int 0)
+		(l-adjacencias NIL)
+		(para-pintar 0)
 		(restricoes NIL))
 		(dotimes (l linhas)
 			(dotimes (c colunas)
 				(setf pos (concatenate 'string (write-to-string l) "_" (write-to-string c)))
 				(setf dom (append dom (list (list 0 1))))
 				(setf vars (append vars (list pos)))
-				(setf int (aref arr l c))
+				(setf para-pintar (aref arr l c))
 
-				(unless(null int) 
-						(setf l1 (lista-adjacencias pos linhas colunas))
-						(setf pred (cria-predicado int l1))
+				(unless(null para-pintar) 
+						(setf l-adjacencias (lista-adjacencias pos linhas colunas))
+						(setf pred (cria-predicado para-pintar l-adjacencias))
 						(setf restricoes 
 							(append restricoes 
 								(list(cria-restricao 
-									l1
+									l-adjacencias
 									pred)
 								)
 							)
