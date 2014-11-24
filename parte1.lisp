@@ -53,7 +53,6 @@
 		(l-vals (psr-atributionValue psr)) 
 		(l-vars (psr-atributionVar psr)))
 
-
 	(loop for var-atr in l-vars
 		for val-atr in l-vals do
 		(cond ((string= var var-atr) (setf value val-atr) (return 0)))
@@ -248,10 +247,43 @@
 	)
 )
 
+
+(defun procura-retrocesso-grau (psr)
+	(let ((var NIL) (r-testes 0) (retorno-atr NIL)
+	(testes 0) (testes-atr NIL) 
+	(consistente-atr NIL) 
+	(resultado NIL) (lista NIL))
+	(cond ( (psr-completo-p psr) (return-from procura-retrocesso-grau (values psr testes)))
+		  (T (setf var (variavel-maior-grau (psr-variaveis-nao-atribuidas psr) psr))))
+		  		
+	(dolist (val (psr-variavel-dominio psr var))
+		(setf retorno-atr (multiple-value-bind (resultado testes) (psr-atribuicao-consistente-p psr var val) (list resultado testes)))
+		(setf consistente-atr (nth 0 retorno-atr))
+		(setf testes-atr (nth 1 retorno-atr))
+		(setf testes (+ testes testes-atr))
+				
+		(cond (consistente-atr 
+					(psr-adiciona-atribuicao! psr var val)
+					(setf lista (multiple-value-bind (resultado r-testes) (procura-retrocesso-grau psr)(list resultado r-testes)) )
+					(setf resultado (nth 0 lista))
+					(setf r-testes (nth 1 lista))
+					(setf testes (+ testes r-testes))
+					(cond (resultado (return-from procura-retrocesso-grau(values resultado testes)))
+						  (T (psr-remove-atribuicao! psr var))
+					))
+		)
+	)
+	(values NIL testes)
+	)
+)
+
+
+
+
 (defun resolve-simples (arr)
 	(let ( (psr NIL) (newpsr NIL) (newarr NIL))
 		(setf psr (fill-a-pix->psr arr ))
-		(setf newpsr (procura-retrocesso-simples psr))
+		(setf newpsr (procura-retrocesso-grau psr))
 		(setf newarr (psr->fill-a-pix newpsr (array-dimension arr 0)(array-dimension arr 1)))))
 		
 
@@ -306,3 +338,45 @@
         until (null finish)
     )
 )
+
+
+
+(defun variavel-maior-grau (l psr)
+	(let ((variavel NIL) (grau1 0) (grau2 0) (value NIL) (var2 NIL) (atrib NIL))
+		(dolist (var1 l)
+			(setf grau1 0)
+			(dolist (res (psr-variavel-restricoes psr var1))
+				(setf var2 (restricao-variaveis res))
+				(setf atrib (cons var1 (psr-atributionVar psr)))
+				(cond ( (null (set-difference var2 atrib :test #'equal)))
+						 (T (incf grau1))
+				)
+			)
+			(cond ((> grau1 grau2) (setf variavel var1) (setf grau2 grau1) ))
+		)
+
+		(values variavel grau2)
+	)
+)	
+			
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
