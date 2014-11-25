@@ -26,37 +26,58 @@
 ;###########################################################################
 
 
-(defstruct psr variables domains restrictions atributionVar atributionValue)
+(defstruct psr variables domains restrictions varsHash)
 
 (defun cria-psr (vars doms restricts)
-(make-psr :variables vars :domains doms :restrictions restricts :atributionVar NIL :atributionValue NIL)
+	(make-psr 
+		:variables vars 
+		:domains doms 
+		:restrictions restricts
+		:varsHash (make-hash-table :test 'equal)
+	)
 )
 
 (defun psr-atribuicoes (psr)
-	(mapcar #'cons (psr-atributionVar psr) (psr-atributionValue psr)))
+	;;(mapcar #'cons (psr-atributionVar psr) (psr-atributionValue psr))
+	(let ((l_atribs NIL))
+        (maphash #'(lambda (key val) 
+            (setf l_atribs (cons (cons key val) l_atribs))) (psr-varsHash psr)
+        )   
+    l_atribs          
+    )
+)
 
 		
 (defun psr-variaveis-todas (psr)
-(psr-variables psr)
+	(psr-variables psr)
+  	
+)
+
+(defun psr-variaveis-atribuidas (psr) 
+	(loop for key being the hash-keys of (psr-varsHash psr) collect key)
 )
 
 (defun psr-variaveis-nao-atribuidas (psr)
 	(let ((vars-nao-atr NIL) 
 		(vars-todas (psr-variaveis-todas psr)) 
-		(vars-atr (psr-atributionVar psr)))
+		(vars-atr NIL))
+		(setf vars-atr (psr-variaveis-atribuidas psr))
 		(setf vars-nao-atr (set-difference vars-todas vars-atr :test #'equal))
 	)
+
+
 )
 
 (defun psr-variavel-valor (psr var)
-	(let ((value NIL)
-		(l-vals (psr-atributionValue psr)) 
-		(l-vars (psr-atributionVar psr)))
+	;;(let ((value NIL)
+	;;	(l-vals (psr-atributionValue psr)) 
+	;;	(l-vars (psr-atributionVar psr)))
 
-	(loop for var-atr in l-vars
-		for val-atr in l-vals do
-		(cond ((string= var var-atr) (setf value val-atr) (return 0)))
-	) value)
+	;;(loop for var-atr in l-vars
+	;;	for val-atr in l-vals do
+	;;	(cond ((string= var var-atr) (setf value val-atr) (return 0)))
+	;;) value)
+	(nth-value 0 (gethash var (psr-varsHash psr)))
 )
 	
 (defun psr-variavel-dominio (psr var)
@@ -79,27 +100,33 @@
 			
 
 (defun psr-adiciona-atribuicao! (psr var value)
-	(let ( 
-		(l-vars (psr-atributionVar psr))
-		(l-vals (psr-atributionValue psr))
-		(i 0)
-		(j NIL))
-		(dolist (v l-vars)
-				(cond ((string= var v) (setf (nth i l-vals) value) (setf j T) (return 0))
-					(T (incf i))))
-
-		(cond ((not j) (setf (psr-atributionVar psr) (append (psr-atributionVar psr) (list var))) 
-						(setf (psr-atributionValue psr) (append (psr-atributionValue psr) (list value)))
-						) ) NIL)
+	;;(let ( 
+	;;	(l-vars (psr-atributionVar psr))
+	;;	(l-vals (psr-atributionValue psr))
+	;;	(i 0)
+	;;	(j NIL))
+	;;	(dolist (v l-vars)
+	;;			(cond ((string= var v) (setf (nth i l-vals) value) (setf j T) (return 0))
+	;;				(T (incf i))))
+	;;
+	;;	(cond ((not j) (setf (psr-atributionVar psr) (append (psr-atributionVar psr) (list var))) 
+	;;					(setf (psr-atributionValue psr) (append (psr-atributionValue psr) (list value)))
+	;;					) ) NIL)
+	(setf (gethash var (psr-varsHash psr)) value)
+	
 )
 												
 (defun psr-remove-atribuicao! (psr var)
-	(let ( (l-vars (psr-atributionVar psr))
-			(i 0))
-			(dolist (v l-vars)
-				(cond ((string= var v) (setf (psr-atributionVar psr) (remove-nth i (psr-atributionVar psr))) 
-										(setf (psr-atributionValue psr)(remove-nth i (psr-atributionValue psr))))
-					(T (incf i)))) NIL))
+	;;(let ( (l-vars (psr-atributionVar psr))
+	;;		(i 0))
+	;;		(dolist (v l-vars)
+	;;			(cond ((string= var v) (setf (psr-atributionVar psr) (remove-nth i (psr-atributionVar psr))) 
+	;;									(setf (psr-atributionValue psr)(remove-nth i (psr-atributionValue psr))))
+	;;				(T (incf i)))) NIL))
+
+	(remhash var (psr-varsHash psr))
+
+)
 							
 (defun psr-altera-dominio! (psr var dom)
 	(let ((i 0)
@@ -114,8 +141,12 @@
 				
 
 (defun psr-completo-p (psr)
-	(cond((= (list-length (psr-variaveis-todas psr)) (list-length (psr-atributionVar psr))) T )
-		(T NIL)))
+	;;(cond((= (list-length (psr-variaveis-todas psr)) (list-length (psr-atributionVar psr))) T )
+	;;	(T NIL))
+
+	(cond((= (list-length (psr-variaveis-todas psr)) (hash-table-count (psr-varsHash psr))) T )
+		(T NIL))
+)
 
 (defun psr-consistente-p (psr)
 	(let((l-restric (psr-restrictions psr))
@@ -204,16 +235,14 @@
 )
 
 (defun psr->fill-a-pix (psr linhas colunas)
-	(let ((posicoes (psr-atributionVar psr))
-		  (valores (psr-atributionValue psr))
+	(let ((posicoes (psr-variaveis-atribuidas psr))
 		  (l NIL)
 		  (c NIL)
 		  (arr (make-array (list linhas colunas))))
-		  (loop for pos in posicoes
-				for val in valores do
+		  (loop for pos in posicoes do
 				(setf l (parse-integer (nth 0 (posicao-divide pos))))
 				(setf c (parse-integer (nth 1 (posicao-divide pos))))
-				(setf (aref arr l c) val)) arr)) 
+				(setf (aref arr l c) (gethash pos (psr-varsHash psr)))) arr)) 
 				
 				
 ;###########################################################################
@@ -359,9 +388,9 @@
 
 
 (defun variavel-maior-grau (psr)
-	(let ((l NIL) (variavel NIL) (grau1 0) (grau2 0) (value NIL) (l_vars_res NIL) (l_atribs NIL) (l_restricoes NIL))
+	(let ((l NIL) (variavel NIL) (grau1 0) (grau2 0) (l_vars_res NIL) (l_atribs NIL) (l_restricoes NIL))
 		(setf l (psr-variaveis-nao-atribuidas psr))
-		(setf l_atribs (psr-atributionVar psr))
+		(setf l_atribs (psr-variaveis-atribuidas psr))
 		(setf variavel (first (psr-variaveis-nao-atribuidas psr)))
 
 		(dolist (var_na l)
@@ -377,26 +406,4 @@
 		)
 		(values variavel grau2)
 	)
-)	
-			
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
-		
+)

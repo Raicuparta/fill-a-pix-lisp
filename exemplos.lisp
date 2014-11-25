@@ -34,7 +34,7 @@
 (defun desenha-linha (linha tabuleiro)
 	(format T "| ")
 	(dotimes (coluna (array-dimension tabuleiro 0))
-		(format T "~A " (if (or (null (aref tabuleiro linha coluna)) (zerop (aref tabuleiro linha coluna))) " " *caracter*)))
+		(format T "~A " (if (zerop (aref tabuleiro linha coluna)) " " *caracter*)))
 	(format T "|~%"))
 
 ;;caso mais simples possivel, uma unica restricao de que tem de ser tudo preto a volta da casa central
@@ -42,6 +42,11 @@
 	'((NIL NIL NIL)
 	  (NIL 9 NIL)
 	  (NIL NIL NIL))))
+	  
+(defparameter e0_1 (make-array (list 3 3) :initial-contents 
+	'((1 NIL 0)
+	  (NIL NIL NIL)
+	  (0 NIL 0))))
 
 ;;este exemplo tem multiplas solucoes possiveis
 (defparameter e1 (make-array (list 5 5) :initial-contents
@@ -59,6 +64,13 @@
 	  (1 NIL NIL NIL 6)
 	  (NIL NIL NIL 9 NIL)
 	  (NIL 5 6 NIL NIL))))
+	  
+(defparameter e1_2(make-array (list 5 5) :initial-contents
+	'((0 NIL 2 NIL 0)
+	  (NIL NIL NIL NIL NIL)
+	  (2 NIL 5 NIL 2)
+	  (NIL NIL NIL NIL NIL)
+	  (0 NIL 2 NIL 0)))) 
 
 ;; os exemplos seguintes foram retirados dos seguintes sitios:
 ;; http://www.conceptispuzzles.com/index.aspx?uri=puzzle/fill-a-pix
@@ -157,3 +169,9 @@
 	  (NIL 7 9 NIL 8 NIL NIL 1 NIL NIL NIL NIL 7 NIL NIL 6 NIL NIL 5 NIL)
 	  (NIL 5 NIL 7 NIL NIL NIL NIL NIL 5 NIL NIL NIL NIL 3 NIL NIL NIL NIL 3)
 	  (NIL NIL NIL NIL 6 5 NIL NIL 4 5 5 NIL NIL 3 NIL NIL NIL 3 NIL NIL))))
+	  
+
+	  
+	  
+	  
+	  
