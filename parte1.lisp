@@ -221,6 +221,8 @@
 ;###########################################################################					
 			
 (defun procura-retrocesso-simples (psr)
+	;;(print (psr-variaveis-nao-atribuidas psr))
+	;;(print (desenha-fill-a-pix (psr->fill-a-pix psr 3 3)))
 	(let ((var NIL) (r-testes 0) (retorno-atr NIL)
 	(testes 0) (testes-atr NIL) 
 	(consistente-atr NIL) 
@@ -249,15 +251,23 @@
 
 
 (defun procura-retrocesso-grau (psr)
+
 	(let ((var NIL) (r-testes 0) (retorno-atr NIL)
 	(testes 0) (testes-atr NIL) 
 	(consistente-atr NIL) 
 	(resultado NIL) (lista NIL))
 	(cond ( (psr-completo-p psr) (return-from procura-retrocesso-grau (values psr testes)))
-		  (T (setf var (variavel-maior-grau (psr-variaveis-nao-atribuidas psr) psr))))
+		  (T (setf var (variavel-maior-grau psr))  ))
+	;;(format T "var: ") (prin1 var)
+	;;(print (psr-variaveis-nao-atribuidas psr))
+	;;(print 0)
+	;;(desenha-fill-a-pix (psr->fill-a-pix psr 3 3))
+	
+	;;(cond ( (null var) (print "oi") ))
 		  		
 	(dolist (val (psr-variavel-dominio psr var))
 		(setf retorno-atr (multiple-value-bind (resultado testes) (psr-atribuicao-consistente-p psr var val) (list resultado testes)))
+		
 		(setf consistente-atr (nth 0 retorno-atr))
 		(setf testes-atr (nth 1 retorno-atr))
 		(setf testes (+ testes testes-atr))
@@ -273,6 +283,7 @@
 					))
 		)
 	)
+
 	(values NIL testes)
 	)
 )
@@ -281,6 +292,12 @@
 
 
 (defun resolve-simples (arr)
+	(let ( (psr NIL) (newpsr NIL) (newarr NIL))
+		(setf psr (fill-a-pix->psr arr ))
+		(setf newpsr (procura-retrocesso-simples psr))
+		(setf newarr (psr->fill-a-pix newpsr (array-dimension arr 0)(array-dimension arr 1)))))
+
+(defun resolve-grau (arr)
 	(let ( (psr NIL) (newpsr NIL) (newarr NIL))
 		(setf psr (fill-a-pix->psr arr ))
 		(setf newpsr (procura-retrocesso-grau psr))
@@ -341,20 +358,23 @@
 
 
 
-(defun variavel-maior-grau (l psr)
-	(let ((variavel NIL) (grau1 0) (grau2 0) (value NIL) (var2 NIL) (atrib NIL))
-		(dolist (var1 l)
+(defun variavel-maior-grau (psr)
+	(let ((l NIL) (variavel NIL) (grau1 0) (grau2 0) (value NIL) (l_vars_res NIL) (l_atribs NIL) (l_restricoes NIL))
+		(setf l (psr-variaveis-nao-atribuidas psr))
+		(setf l_atribs (psr-atributionVar psr))
+		(setf variavel (first (psr-variaveis-nao-atribuidas psr)))
+
+		(dolist (var_na l)
 			(setf grau1 0)
-			(dolist (res (psr-variavel-restricoes psr var1))
-				(setf var2 (restricao-variaveis res))
-				(setf atrib (cons var1 (psr-atributionVar psr)))
-				(cond ( (null (set-difference var2 atrib :test #'equal)))
+			(setf l_restricoes (psr-variavel-restricoes psr var_na))
+			(dolist (res l_restricoes)
+				(setf l_vars_res (restricao-variaveis res))
+				(cond ( (null (set-difference l_vars_res l_atribs :test #'equal)))
 						 (T (incf grau1))
 				)
 			)
-			(cond ((> grau1 grau2) (setf variavel var1) (setf grau2 grau1) ))
+			(cond ((> grau1 grau2) (setf variavel var_na) (setf grau2 grau1) ))
 		)
-
 		(values variavel grau2)
 	)
 )	
