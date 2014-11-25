@@ -312,12 +312,47 @@
 					))
 		)
 	)
-
 	(values NIL testes)
 	)
 )
 
 
+(defun procura-retrocesso-fc-mrv (psr)
+	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes NIL) (testes2 NIL) (resultado NIL) (teste NIL) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
+		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais))))
+		(setf var (mrv psr))
+		(setf dominio (psr-variavel-dominio psr var))
+		(dolist (value dominio)
+			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
+			(setf consistente (nth 0 lista))
+			(setf teste (nth 1 lista))
+			(cond ((null teste) (setf teste 0)))
+			(setf testes-totais (+ testes-totais teste))
+			(cond (consistente
+					(psr-adiciona-atribuicao! psr var value)
+					(setf lista2 (multiple-value-bind (inferencias testes) (forward-checking psr var)(list inferencias testes)) )
+					(setf inferencias (nth 0 lista2))
+					(setf testes (nth 1 lista2))
+					(setf testes-totais (+ testes-totais testes))
+					(cond (inferencias
+						   (setf backup-dominio (copia-dominio psr inferencias))
+						   (loop for key being the hash-keys of inferencias do
+								
+								(psr-altera-dominio! psr key (gethash key inferencias)))
+						  
+						   (setf lista3 (multiple-value-bind (resultado testes2) (procura-retrocesso-fc-mrv psr)(list resultado testes2)) )
+						   (setf resultado (nth 0 lista3))
+						   (setf testes2 (nth 1 lista3))
+						   (cond ((null testes2) (setf testes2 0)))
+						   (setf testes-totais (+ testes-totais testes2))
+						   (cond (resultado
+									(return-from procura-retrocesso-fc-mrv (values resultado testes-totais)))
+								 (T (loop for key being the hash-keys of backup-dominio do
+											(psr-altera-dominio! psr key (gethash key backup-dominio))))))
+					(T (psr-remove-atribuicao! psr var))))))
+		(values NIL testes-totais)
+	)
+)
 
 
 (defun resolve-simples (arr)
@@ -398,7 +433,7 @@
 			(setf l_restricoes (psr-variavel-restricoes psr var_na))
 			(dolist (res l_restricoes)
 				(setf l_vars_res (restricao-variaveis res))
-				(cond ( (null (set-difference l_vars_res l_atribs :test #'equal)))
+				(cond ( (null (set-difference l_vars_res (cons var_na l_atribs) :test #'equal)))
 						 (T (incf grau1))
 				)
 			)
@@ -407,3 +442,102 @@
 		(values variavel grau2)
 	)
 )
+
+
+(defun arcos-vizinhos-nao-atribuidos (psr var)
+	(let ((lista-arcos NIL) (l_na NIL) (l_res NIL) (vars_res NIL))
+		(setf l_res (psr-variavel-restricoes psr var))
+		(setf l_na (psr-variaveis-nao-atribuidas psr))
+		(dolist (var_na l_na)
+			(cond ( (not(equal var var_na))
+				(dolist (res l_res)
+					(setf vars_res (restricao-variaveis res))
+					(cond ( (member var_na vars_res :test #'equal) 
+							(cond ((not(member (cons var_na var) lista-arcos :test #'equal))
+								(setf lista-arcos (append lista-arcos (list (cons var_na var)))))
+							
+						)))))))
+		lista-arcos
+	)
+)
+
+(defun revise (psr var1 var2 inferencias)
+	(let ((testes-totais 0) (valores NIL) (i 0) (consistente NIL) (testes NIL) (l_hash2 NIL)
+		  (foundConsistentValue NIL) (revised NIL) (dominio-var1 NIL) (var2-valor NIL)
+		  (dominio-var2 NIL) (novo-dominio-var1 NIL) (l_hash NIL) ) 
+		(setf l_hash (multiple-value-bind (value has-domain) (gethash var1 inferencias)(list value has-domain)) )
+		(cond ((nth 1 l_hash) (setf dominio-var1 (nth 0 l_hash)))
+			(T (setf dominio-var1 (psr-variavel-dominio psr var1))))
+		(setf novo-dominio-var1 dominio-var1)
+		(setf var2-valor (psr-variavel-valor psr var2))
+		(cond (var2-valor (setf dominio-var2 (append dominio-var2 (list var2-valor))))
+			  (T 
+				(setf l_hash2 (multiple-value-bind (value has-domain) (gethash var2 inferencias)(list value has-domain)) )
+				(cond ((nth 1 l_hash2) (setf dominio-var2 (nth 0 l_hash2)))
+					  (T (setf dominio-var2 (psr-variavel-dominio psr var2)))))) 
+		(dolist (d_value1 dominio-var1)
+			(setf foundConsistentValue NIL)
+			(dolist (d_value2 dominio-var2)
+				(setf valores (multiple-value-bind (consistente testes) (psr-atribuicoes-consistentes-arco-p psr var1 d_value1 var2 d_value2)(list consistente testes)) )
+				(setf consistente (nth 0 valores))
+				(setf testes (nth 1 valores))
+				(cond ((null testes) (setf testes 0)))
+				(setf testes-totais (+ testes-totais testes))
+				(cond (consistente (setf foundConsistentValue T) (return 0))))
+				
+			(cond ((null foundConsistentValue) (setf revised T) 
+						(dolist (aux novo-dominio-var1) ;MELHORAR MAYBE
+							(cond ((equal d_value1 aux) (remove-nth i novo-dominio-var1))) (incf i)))))
+		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1)))
+		(values revised testes-totais)
+	)
+)
+
+(defun forward-checking (psr var)
+	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL) (testes NIL) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
+		(setf inferencias (make-hash-table :test 'equal))
+		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
+		(dolist (el lista-arcos)
+			(setf v2 (car el))
+			(setf v1 (cdr el))
+			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
+			(setf revised (nth 0 valores))
+			(setf testes (nth 1 valores))
+			(cond ((null testes) (setf testes 0)))
+			(setf testes-totais (+ testes-totais testes))
+			(cond (revised 
+					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
+					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from forward-checking (values NIL testes-totais)))))))
+		(values inferencias testes-totais)
+	)
+)
+
+(defun copia-dominio (psr inferencias)
+	(let ((backup NIL))
+		(setf backup (make-hash-table :test 'equal))
+		(loop for key being the hash-keys of inferencias do
+			(setf (gethash key backup) (psr-variavel-dominio psr key)))
+		backup
+	)
+)
+
+
+(defun mrv (psr)
+	(let ((l_vars NIL) (var NIL) (tamanho NIL) (v_tamanho NIL))
+		(setf l_vars (psr-variaveis-todas psr))
+		(setf var (first l_vars))
+		(setf tamanho (list-length (psr-variavel-dominio psr var)))
+		(dolist (v l_vars)
+			(setf v_tamanho (list-length (psr-variavel-dominio psr v)))
+			(cond ((> tamanho v_tamanho) (setf var v) (setf tamanho v_tamanho)))
+		)
+		var
+	)
+)
+
+(defun cenas (inferencias)
+	(setf (gethash "0_0" inferencias) (list 0)))
+
+
+
+
