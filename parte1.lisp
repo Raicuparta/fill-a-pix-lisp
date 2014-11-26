@@ -28,9 +28,6 @@
 
 (defstruct psr variables domains restrictions varsHash)
 
-
-(defstruct psr variables domains restrictions varsHash)
-
 (defun cria-psr (vars doms restricts)
 	(let ((dom_hash NIL) (var_hash NIL))
 		(setf dom_hash (make-hash-table :test 'equal))
@@ -336,8 +333,9 @@
 
 (defun procura-retrocesso-fc-mrv (psr)
 	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes 0) (testes2 0) (resultado NIL) (teste 0) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
-		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais))))
-		(setf var (mrv psr))
+		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais)))
+				(T (setf var (mrv psr))))
+		
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
 

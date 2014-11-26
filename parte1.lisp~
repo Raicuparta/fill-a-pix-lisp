@@ -28,9 +28,6 @@
 
 (defstruct psr variables domains restrictions varsHash)
 
-
-(defstruct psr variables domains restrictions varsHash)
-
 (defun cria-psr (vars doms restricts)
 	(let ((dom_hash NIL) (var_hash NIL))
 		(setf dom_hash (make-hash-table :test 'equal))
@@ -96,15 +93,16 @@
 )
 	
 (defun psr-variavel-dominio (psr var)
-	(let ((domain NIL)
-		(l-vars (psr-variaveis-todas psr)) 
-		(l-doms (psr-domains psr)))
-		
-		(loop for v in l-vars
-		for dom in l-doms do
-			(cond ((string= var v) (setf domain dom) (return 0)))
-		) domain)
-)				
+	;(let ((domain NIL)
+	;	(l-vars (psr-variaveis-todas psr)) 
+	;	(l-doms (psr-domains psr)))
+	;	
+	;	(loop for v in l-vars
+	;	for dom in l-doms do
+	;		(cond ((string= var v) (setf domain dom) (return 0)))
+	;	) domain)
+	(gethash var (psr-domains psr))
+)								
 
 (defun psr-variavel-restricoes (psr var)
 	(let ((l-restric NIL)
@@ -144,16 +142,16 @@
 )
 							
 (defun psr-altera-dominio! (psr var dom)
-	(let ((i 0)
-		(l-vars (psr-variaveis-todas psr))
-		(l-doms (psr-domains psr)))
-
-		(dolist (v l-vars)
-				(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
-					(T (incf i))))
-	NIL)
-)
-				
+	;(let ((i 0)
+	;	(l-vars (psr-variaveis-todas psr))
+	;	(l-doms (psr-domains psr)))
+	;
+	;	(dolist (v l-vars)
+	;			(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
+	;				(T (incf i))))
+	;NIL)
+	(setf (gethash var (psr-domains psr)) dom)
+)				
 
 (defun psr-completo-p (psr)
 	;;(cond((= (list-length (psr-variaveis-todas psr)) (list-length (psr-atributionVar psr))) T )
@@ -335,8 +333,9 @@
 
 (defun procura-retrocesso-fc-mrv (psr)
 	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes 0) (testes2 0) (resultado NIL) (teste 0) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
-		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais))))
-		(setf var (mrv psr))
+		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais)))
+				(T (setf var (mrv psr)))
+		
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
 
