@@ -318,7 +318,7 @@
 
 
 (defun procura-retrocesso-fc-mrv (psr)
-	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes NIL) (testes2 NIL) (resultado NIL) (teste NIL) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
+	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes 0) (testes2 0) (resultado NIL) (teste 0) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
 		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais))))
 		(setf var (mrv psr))
 		(setf dominio (psr-variavel-dominio psr var))
@@ -326,7 +326,7 @@
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))
-			(cond ((null teste) (setf teste 0)))
+			;(cond ((null teste) (setf teste 0)))
 			(setf testes-totais (+ testes-totais teste))
 			(cond (consistente
 					(psr-adiciona-atribuicao! psr var value)
@@ -334,16 +334,16 @@
 					(setf inferencias (nth 0 lista2))
 					(setf testes (nth 1 lista2))
 					(setf testes-totais (+ testes-totais testes))
-					(cond (inferencias
+					(cond ( (not (eq 0 (hash-table-count inferencias)))
 						   (setf backup-dominio (copia-dominio psr inferencias))
+						   (print "RETROCESSO") (prin1 inferencias)
 						   (loop for key being the hash-keys of inferencias do
-								
 								(psr-altera-dominio! psr key (gethash key inferencias)))
 						  
 						   (setf lista3 (multiple-value-bind (resultado testes2) (procura-retrocesso-fc-mrv psr)(list resultado testes2)) )
 						   (setf resultado (nth 0 lista3))
 						   (setf testes2 (nth 1 lista3))
-						   (cond ((null testes2) (setf testes2 0)))
+						   ;(cond ((null testes2) (setf testes2 0)))
 						   (setf testes-totais (+ testes-totais testes2))
 						   (cond (resultado
 									(return-from procura-retrocesso-fc-mrv (values resultado testes-totais)))
@@ -462,13 +462,12 @@
 )
 
 (defun revise (psr var1 var2 inferencias)
-	(let ((testes-totais 0) (valores NIL) (i 0) (consistente NIL) (testes NIL) (l_hash2 NIL)
+	(let ((testes-totais 0) (valores NIL) (i 0) (consistente NIL) (testes 0) (l_hash2 NIL)
 		  (foundConsistentValue NIL) (revised NIL) (dominio-var1 NIL) (var2-valor NIL)
 		  (dominio-var2 NIL) (novo-dominio-var1 NIL) (l_hash NIL) ) 
 		(setf l_hash (multiple-value-bind (value has-domain) (gethash var1 inferencias)(list value has-domain)) )
-		;(cond ((nth 1 l_hash) (setf dominio-var1 (nth 0 l_hash)))
-		;	  (T (setf dominio-var1 (psr-variavel-dominio psr var1))))
-		(setf dominio-var1 (list(psr-variavel-valor psr var1)))
+		(cond ((nth 1 l_hash) (setf dominio-var1 (nth 0 l_hash)))
+			(T (setf dominio-var1 (psr-variavel-dominio psr var1))))
 		(setf novo-dominio-var1 dominio-var1)
 		(setf var2-valor (psr-variavel-valor psr var2))
 		(cond (var2-valor (setf dominio-var2 (append dominio-var2 (list var2-valor))))
@@ -482,20 +481,21 @@
 				(setf valores (multiple-value-bind (consistente testes) (psr-atribuicoes-consistentes-arco-p psr var1 d_value1 var2 d_value2)(list consistente testes)) )
 				(setf consistente (nth 0 valores))
 				(setf testes (nth 1 valores))
-				(cond ((null testes) (setf testes 0)))
+				;(cond ((null testes) (setf testes 0)))
 				(setf testes-totais (+ testes-totais testes))
 				(cond (consistente (setf foundConsistentValue T) (return 0))))
 				
 			(cond ((null foundConsistentValue) (setf revised T) 
 						(dolist (aux novo-dominio-var1) ;MELHORAR MAYBE
-							(cond ((equal d_value1 aux) (remove-nth i novo-dominio-var1))) (incf i)))))
-		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1)))
+							(cond ((equal d_value1 aux) (setf novo-dominio-var1 (remove-nth i novo-dominio-var1)))) (incf i)))))
+		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1) (print "revise") (prin1 inferencias)))
+		
 		(values revised testes-totais)
 	)
 )
 
 (defun forward-checking (psr var)
-	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL) (testes NIL) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
+	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL) (testes 0) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
 		(setf inferencias (make-hash-table :test 'equal))
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
 		(dolist (el lista-arcos)
@@ -504,9 +504,10 @@
 			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
 			(setf revised (nth 0 valores))
 			(setf testes (nth 1 valores))
-			(cond ((null testes) (setf testes 0)))
+			;(cond ((null testes) (setf testes 0)))
 			(setf testes-totais (+ testes-totais testes))
-			(cond (revised 
+			(cond (revised
+					(print "FC") (prin1 inferencias)
 					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
 					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from forward-checking (values NIL testes-totais)))))))
 		(values inferencias testes-totais)
