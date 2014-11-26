@@ -472,9 +472,20 @@
 )
 
 (defun revise (psr var1 var2 inferencias)
-	(let ((testes-totais 0) (valores NIL) (i 0) (consistente NIL) (testes 0) (l_hash2 NIL)
-		  (foundConsistentValue NIL) (revised NIL) (dominio-var1 NIL) (var2-valor NIL)
-		  (dominio-var2 NIL) (novo-dominio-var1 NIL) (l_hash NIL) ) 
+	(let (
+			(testes-totais 0)
+			(valores NIL)
+			(consistente NIL)
+			(testes 0)
+			(l_hash2 NIL)
+			(foundConsistentValue NIL)
+			(revised NIL)
+			(dominio-var1 NIL)
+			(var2-valor NIL)
+			(dominio-var2 NIL)
+			(novo-dominio-var1 NIL)
+			(l_hash NIL)
+		) 
 		(setf l_hash (multiple-value-bind (value has-domain) (gethash var1 inferencias)(list value has-domain)) )
 		(cond ((nth 1 l_hash) (setf dominio-var1 (nth 0 l_hash)))
 			(T (setf dominio-var1 (psr-variavel-dominio psr var1))))
@@ -496,10 +507,11 @@
 				(setf testes-totais (+ testes-totais testes))
 				(cond (consistente (setf foundConsistentValue T) (return 0))))
 				
-			(cond ((null foundConsistentValue) (setf revised T) 
-						(dolist (aux novo-dominio-var1) ;MELHORAR MAYBE
-							(cond ((equal d_value1 aux) (setf novo-dominio-var1 (remove-nth i novo-dominio-var1)))) (incf i)))))
-		
+			(cond ((null foundConsistentValue) 
+				(setf revised T) 
+				(setf novo-dominio-var1 (remove d_value1 novo-dominio-var1 :test #'equal)))
+			)
+		)
 		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1) ))
 		(values revised testes-totais)
 	)
@@ -615,7 +627,7 @@
 					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from mac (values NIL testes-totais))))))
 		
 			(setf novos-arcos (arcos-vizinhos-nao-atribuidos psr v2))
-			(remove el novos-arcos :test #'equal)
+			(setf novos-arcos (remove el novos-arcos :test #'equal))
 			(setf lista-arcos (append lista-arcos novos-arcos))
 		)
 		
