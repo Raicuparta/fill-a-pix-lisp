@@ -155,9 +155,10 @@
 		(valido NIL))
 		(dolist (restric l-restric)
 			(setf valido (funcall(restricao-funcao-validacao restric) psr))
-			(cond( (eq valido 1))
-				((eq valido T) (incf i))
+			;(cond( (eq valido 1))
+				(cond ((eq valido T) (incf i))
 				(T (setf j NIL) (incf i) (return (values j i)))))
+				
 		
 		(values j i)))
 		
@@ -323,6 +324,7 @@
 		(setf var (mrv psr))
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
+			(print value) (prin1 dominio) (prin1 var)
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))
@@ -334,9 +336,9 @@
 					(setf inferencias (nth 0 lista2))
 					(setf testes (nth 1 lista2))
 					(setf testes-totais (+ testes-totais testes))
-					(cond ( (not (eq 0 (hash-table-count inferencias)))
+					
+					(cond ( (not (null inferencias))              ;(and (not (null inferencias)) (not (eq 0 (hash-table-count inferencias))))
 						   (setf backup-dominio (copia-dominio psr inferencias))
-						   (print "RETROCESSO") (prin1 inferencias)
 						   (loop for key being the hash-keys of inferencias do
 								(psr-altera-dominio! psr key (gethash key inferencias)))
 						  
@@ -488,7 +490,7 @@
 			(cond ((null foundConsistentValue) (setf revised T) 
 						(dolist (aux novo-dominio-var1) ;MELHORAR MAYBE
 							(cond ((equal d_value1 aux) (setf novo-dominio-var1 (remove-nth i novo-dominio-var1)))) (incf i)))))
-		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1) (print "revise") (prin1 inferencias)))
+		(cond (revised (setf (gethash var1 inferencias) novo-dominio-var1) ))
 		
 		(values revised testes-totais)
 	)
@@ -497,6 +499,7 @@
 (defun forward-checking (psr var)
 	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL) (testes 0) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
 		(setf inferencias (make-hash-table :test 'equal))
+		;(setf (gethash var inferencias) ())
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
 		(dolist (el lista-arcos)
 			(setf v2 (car el))
@@ -507,7 +510,6 @@
 			;(cond ((null testes) (setf testes 0)))
 			(setf testes-totais (+ testes-totais testes))
 			(cond (revised
-					(print "FC") (prin1 inferencias)
 					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
 					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from forward-checking (values NIL testes-totais)))))))
 		(values inferencias testes-totais)
@@ -526,7 +528,7 @@
 
 (defun mrv (psr)
 	(let ((l_vars NIL) (var NIL) (tamanho NIL) (v_tamanho NIL))
-		(setf l_vars (psr-variaveis-todas psr))
+		(setf l_vars (psr-variaveis-nao-atribuidas psr))
 		(setf var (first l_vars))
 		(setf tamanho (list-length (psr-variavel-dominio psr var)))
 		(dolist (v l_vars)
@@ -536,9 +538,6 @@
 		var
 	)
 )
-
-(defun cenas (inferencias)
-	(setf (gethash "0_0" inferencias) (list 0)))
 
 
 
