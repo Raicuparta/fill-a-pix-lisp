@@ -28,6 +28,9 @@
 
 (defstruct psr variables domains restrictions varsHash)
 
+
+(defstruct psr variables domains restrictions varsHash)
+
 (defun cria-psr (vars doms restricts)
 	(let ((dom_hash NIL) (var_hash NIL))
 		(setf dom_hash (make-hash-table :test 'equal))
@@ -47,6 +50,7 @@
 		)
     )
 )
+
 
 (defun psr-atribuicoes (psr)
 	;;(mapcar #'cons (psr-atributionVar psr) (psr-atributionValue psr))
@@ -92,16 +96,16 @@
 )
 	
 (defun psr-variavel-dominio (psr var)
-	;(let ((domain NIL)
-	;	(l-vars (psr-variaveis-todas psr)) 
-	;	(l-doms (psr-domains psr)))
-	;	
-	;	(loop for v in l-vars
-	;	for dom in l-doms do
-	;		(cond ((string= var v) (setf domain dom) (return 0)))
-	;	) domain)
-	(gethash var (psr-domains psr))
-)	
+	(let ((domain NIL)
+		(l-vars (psr-variaveis-todas psr)) 
+		(l-doms (psr-domains psr)))
+		
+		(loop for v in l-vars
+		for dom in l-doms do
+			(cond ((string= var v) (setf domain dom) (return 0)))
+		) domain)
+)				
+
 (defun psr-variavel-restricoes (psr var)
 	(let ((l-restric NIL)
 		(l-todas-restric (psr-restrictions psr)))
@@ -140,15 +144,14 @@
 )
 							
 (defun psr-altera-dominio! (psr var dom)
-	;(let ((i 0)
-	;	(l-vars (psr-variaveis-todas psr))
-	;	(l-doms (psr-domains psr)))
-	;
-	;	(dolist (v l-vars)
-	;			(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
-	;				(T (incf i))))
-	;NIL)
-	(setf (gethash var (psr-domains psr)) dom)
+	(let ((i 0)
+		(l-vars (psr-variaveis-todas psr))
+		(l-doms (psr-domains psr)))
+
+		(dolist (v l-vars)
+				(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
+					(T (incf i))))
+	NIL)
 )
 				
 
@@ -336,7 +339,7 @@
 		(setf var (mrv psr))
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
-			(print value) (prin1 dominio) (prin1 var)
+
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))

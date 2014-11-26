@@ -28,14 +28,29 @@
 
 (defstruct psr variables domains restrictions varsHash)
 
+
+(defstruct psr variables domains restrictions varsHash)
+
 (defun cria-psr (vars doms restricts)
-	(make-psr 
-		:variables vars 
-		:domains doms 
-		:restrictions restricts
-		:varsHash (make-hash-table :test 'equal)
-	)
+	(let ((dom_hash NIL) (var_hash NIL))
+		(setf dom_hash (make-hash-table :test 'equal))
+		(setf var_hash (make-hash-table :test 'equal))
+		
+		(loop 
+			for var in vars
+			for dom in doms
+			do (setf (gethash var dom_hash) dom)
+		)
+	
+		(make-psr 
+			:variables vars
+			:domains dom_hash
+			:restrictions restricts
+			:varsHash var_hash
+		)
+    )
 )
+
 
 (defun psr-atribuicoes (psr)
 	;;(mapcar #'cons (psr-atributionVar psr) (psr-atributionValue psr))
@@ -81,15 +96,16 @@
 )
 	
 (defun psr-variavel-dominio (psr var)
-	(let ((domain NIL)
-		(l-vars (psr-variaveis-todas psr)) 
-		(l-doms (psr-domains psr)))
-		
-		(loop for v in l-vars
-		for dom in l-doms do
-			(cond ((string= var v) (setf domain dom) (return 0)))
-		) domain)
-)				
+	;(let ((domain NIL)
+	;	(l-vars (psr-variaveis-todas psr)) 
+	;	(l-doms (psr-domains psr)))
+	;	
+	;	(loop for v in l-vars
+	;	for dom in l-doms do
+	;		(cond ((string= var v) (setf domain dom) (return 0)))
+	;	) domain)
+	(gethash var (psr-domains psr))
+)								
 
 (defun psr-variavel-restricoes (psr var)
 	(let ((l-restric NIL)
@@ -129,16 +145,16 @@
 )
 							
 (defun psr-altera-dominio! (psr var dom)
-	(let ((i 0)
-		(l-vars (psr-variaveis-todas psr))
-		(l-doms (psr-domains psr)))
-
-		(dolist (v l-vars)
-				(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
-					(T (incf i))))
-	NIL)
-)
-				
+	;(let ((i 0)
+	;	(l-vars (psr-variaveis-todas psr))
+	;	(l-doms (psr-domains psr)))
+	;
+	;	(dolist (v l-vars)
+	;			(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
+	;				(T (incf i))))
+	;NIL)
+	(setf (gethash var (psr-domains psr)) dom)
+)				
 
 (defun psr-completo-p (psr)
 	;;(cond((= (list-length (psr-variaveis-todas psr)) (list-length (psr-atributionVar psr))) T )
