@@ -9,15 +9,15 @@
 (defstruct restriction variables pred)
 
 (defun cria-restricao (vars p)
-(make-restriction :variables vars :pred p)
+	(make-restriction :variables vars :pred p)
 )
 
 (defun restricao-variaveis (r)
-(restriction-variables r)
+	(restriction-variables r)
 )
 
 (defun restricao-funcao-validacao (r)
-(restriction-pred r)
+	(restriction-pred r)
 )
 
 
@@ -65,18 +65,13 @@
   	
 )
 
-(defun psr-variaveis-atribuidas (psr) 
-	(loop for key being the hash-keys of (psr-varsHash psr) collect key)
-)
-
 (defun psr-variaveis-nao-atribuidas (psr)
 	(let ((vars-nao-atr NIL) 
 		(vars-todas (psr-variaveis-todas psr)) 
 		(vars-atr NIL))
-		(setf vars-atr (psr-variaveis-atribuidas psr))
+		(setf vars-atr (loop for key being the hash-keys of (psr-varsHash psr) collect key))
 		(setf vars-nao-atr (set-difference vars-todas vars-atr :test #'equal))
 	)
-
 
 )
 
@@ -101,7 +96,7 @@
 	;	for dom in l-doms do
 	;		(cond ((string= var v) (setf domain dom) (return 0)))
 	;	) domain)
-	(gethash var (psr-domains psr))
+	(nth-value 0 (gethash var (psr-domains psr)))
 )								
 
 (defun psr-variavel-restricoes (psr var)
@@ -249,14 +244,16 @@
 )
 
 (defun psr->fill-a-pix (psr linhas colunas)
-	(let ((posicoes (psr-variaveis-atribuidas psr))
+	(let ((posicoes NIL)
 		  (l NIL)
 		  (c NIL)
 		  (arr (make-array (list linhas colunas))))
+		  
+		  (setf posicoes (mapcar #'car (psr-atribuicoes psr)))
 		  (loop for pos in posicoes do
 				(setf l (parse-integer (nth 0 (posicao-divide pos))))
 				(setf c (parse-integer (nth 1 (posicao-divide pos))))
-				(setf (aref arr l c) (gethash pos (psr-varsHash psr)))) arr)) 
+				(setf (aref arr l c) (psr-variavel-valor psr pos))) arr)) 
 				
 				
 ;###########################################################################
@@ -334,7 +331,7 @@
 (defun procura-retrocesso-fc-mrv (psr)
 	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes 0) (testes2 0) (resultado NIL) (teste 0) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
 		(cond ((psr-completo-p psr) (return-from procura-retrocesso-fc-mrv (values psr testes-totais)))
-				(T (setf var (mrv psr)))
+				(T (setf var (mrv psr))))
 		
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
@@ -436,12 +433,10 @@
     )
 )
 
-
-
 (defun variavel-maior-grau (psr)
 	(let ((l NIL) (variavel NIL) (grau1 0) (grau2 0) (l_vars_res NIL) (l_atribs NIL) (l_restricoes NIL))
 		(setf l (psr-variaveis-nao-atribuidas psr))
-		(setf l_atribs (psr-variaveis-atribuidas psr))
+		(setf l_atribs (mapcar #'car (psr-atribuicoes psr)))
 		(setf variavel (first (psr-variaveis-nao-atribuidas psr)))
 
 		(dolist (var_na l)
@@ -458,7 +453,6 @@
 		(values variavel grau2)
 	)
 )
-
 
 (defun arcos-vizinhos-nao-atribuidos (psr var)
 	(let ((lista-arcos NIL) (l_na NIL) (l_res NIL) (vars_res NIL))
