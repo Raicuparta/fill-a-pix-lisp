@@ -324,7 +324,7 @@
 		(setf var (mrv psr))
 		(setf dominio (psr-variavel-dominio psr var))
 		(dolist (value dominio)
-			(print value) (prin1 dominio) (prin1 var)
+
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))
