@@ -190,15 +190,46 @@
 		(cond ( (null oldval) (psr-remove-atribuicao! psr var) )
 			(T (psr-adiciona-atribuicao! psr var oldval))) (values i j)))		  
 
-(defun psr-atribuicoes-consistentes-arco-p (psr var1 val1 var2 val2)
-	(let ((l-restric NIL) (i NIL) (j NIL) (newpsr NIL))
+(defun psr-atribuicoes-consistentes-arco-p (psr var1 valor1 var2 valor2)
+	(let ((l-restric nil) (testes 0) (state t) (oldValue1 nil) (oldValue2 nil))
+		
+		(setf oldValue1 (psr-variavel-valor psr var1))
+		(setf oldValue2 (psr-variavel-valor psr var2))
+		(psr-adiciona-atribuicao! psr var1 valor1)
+		(psr-adiciona-atribuicao! psr var2 valor2)
+		
+		(setf l-restric (psr-variavel-restricoes psr var1))
+		
+		(dolist (r l-restric)
+			(cond ((member var2 (restricao-variaveis r) :test #'equal)
+				(incf testes)
+				(cond( (funcall(restricao-funcao-validacao r) psr) (
+				
+				(psr-adiciona-atribuicao! psr variavel1 oldValue1)
+				(psr-adiciona-atribuicao! psr variavel2 oldValue2)
+				(return-from psr-atribuicoes-consistentes-arco-p (values NIL testes))
+				
+				)))
+					
+				)
+			
+				)
+			
+			)
+		)
+		
 		(setf l-restric (intersection (psr-variavel-restricoes psr var1) (psr-variavel-restricoes psr var2)))
 		(setf newpsr (cria-psr (list var1 var2) (list (list val1) (list val2)) l-restric))
 		(psr-adiciona-atribuicao! newpsr var1 val1)
 		(psr-adiciona-atribuicao! newpsr var2 val2)
 		(setf i (values (psr-consistente-p newpsr)))
 		(setf j (nth-value 1 (psr-consistente-p newpsr)))
-		(values i j)))
+		(values i j))
+		
+		
+		
+		
+)
 
 		
 ;###########################################################################
@@ -486,9 +517,12 @@
 			(novo-dominio-var1 NIL)
 			(l_hash NIL)
 		) 
+		
 		(setf l_hash (multiple-value-bind (value has-domain) (gethash var1 inferencias)(list value has-domain)) )
+		
 		(cond ((nth 1 l_hash) (setf dominio-var1 (nth 0 l_hash)))
 			(T (setf dominio-var1 (psr-variavel-dominio psr var1))))
+		
 		(setf novo-dominio-var1 dominio-var1)
 		(setf var2-valor (psr-variavel-valor psr var2))
 		(cond (var2-valor (setf dominio-var2 (append dominio-var2 (list var2-valor))))
@@ -517,25 +551,44 @@
 	)
 )
 
+;(defun forward-checking (psr var)
+;	(let ((lista-arcos NIL) (dominio-v2 NIL) (testes-totais 0) (inferencias NIL) (testes 0) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
+;		(setf inferencias (make-hash-table :test 'equal))
+;		;(setf (gethash var inferencias) ())
+;		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
+;		(dolist (el lista-arcos)
+;			(setf v2 (car el))
+;			(setf v1 (cdr el))
+;			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
+;			(setf revised (nth 0 valores))
+;			(setf testes (nth 1 valores))
+;			;(cond ((null testes) (setf testes 0)))
+;			(setf testes-totais (+ testes-totais testes))
+;			(cond (revised
+;					(setf dominio-v2 (gethash v2 inferencias))
+;					(cond ((zerop (length dominio-v2)) (return-from forward-checking (values NIL testes-totais))))))
+;		)
+;		(values inferencias testes-totais)
+;	)
+;)
+
+
+
 (defun forward-checking (psr var)
-	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL) (testes 0) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) (l_hash NIL))
+	(let ((testesTotais 0) (lista-arcos nil) (revise nil) (inferencias NIL))
 		(setf inferencias (make-hash-table :test 'equal))
-		;(setf (gethash var inferencias) ())
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
-		(dolist (el lista-arcos)
-			(setf v2 (car el))
-			(setf v1 (cdr el))
-			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
-			(setf revised (nth 0 valores))
-			(setf testes (nth 1 valores))
-			;(cond ((null testes) (setf testes 0)))
-			(setf testes-totais (+ testes-totais testes))
-			(cond (revised
-					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
-					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from forward-checking (values NIL testes-totais)))))))
-		(values inferencias testes-totais)
-	)
+
+		(dolist (arco lista-arcos)
+			(multiple-value-bind (a b) (revise psr (car arco) (cdr arco) inferencias) (setf revise (cons a b)))
+			(setf testesTotais (+ testesTotais (cdr revise)))
+			(cond ((car revise)
+					(cond ((= (length (gethash (car arco) inferencias)) 0)
+							(return-from forward-checking (values nil testesTotais)))))))
+		(values inferencias testesTotais))
 )
+
+
 
 (defun copia-dominio (psr inferencias)
 	(let ((backup NIL))
