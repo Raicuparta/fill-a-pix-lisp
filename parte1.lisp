@@ -589,11 +589,6 @@
 		var
 	)
 )
-
-
-
-
-
 (defun procura-retrocesso-MAC-mrv (psr)
 	(let ((testes-totais 0) (var NIL) (dominio NIL) (testes 0) (testes2 0) (resultado NIL) (teste 0) (backup-dominio NIL) (inferencias NIL) (lista3 NIL) (consistente NIL) (lista2 NIL) (lista NIL))
 		(cond ((psr-completo-p psr) (return-from procura-retrocesso-MAC-mrv (values psr testes-totais))))
@@ -633,140 +628,38 @@
 	)
 )
 
-
-
-
 (defun mac (psr var)
 	(let ((lista-arcos NIL) (testes-totais 0) (inferencias NIL)
-			(testes 0) (cont NIL)
-			;(v1 NIL) 
-;; 			;(novos-arcos NIL)
-			(valores NIL)
-			)
-			;(v2 NIL) 
-			;(aux NIL)
-			;(aux-testes 0)
-			;(aux-revised NIL)
-			;(l_hash NIL))
+			(testes 0) (revised NIL)(v1 NIL) (novos-arcos NIL)
+			(valores NIL)(v2 NIL) (l_hash NIL))
 		(setf inferencias (make-hash-table :test 'equal))
 		;(setf (gethash var inferencias) ())
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
-		;(setf valores (multiple-value-bind (revised testes) (iteracao psr lista-arcos inferencias)(list revised testes)) )
-		;(setf revised (nth 0 valores))
-		;(setf testes (nth 1 valores))
-		;(cond ((null testes) (setf testes 0)))
-		;(setf testes (iteracao psr lista-arcos inferencias))
-		;(setf testes-totais (+ testes-totais testes))
-		(loop do
-			(setf valores (multiple-value-bind (inf revised testes) (iteracao psr lista-arcos inferencias)(list inf revised testes)) )
-			(setf inferencias (nth 1 valores))
-			(setf testes (nth 2 valores))
-			(setf cont (nth 0 valores))
-			(setf lista-arcos (nth 3 valores))
-			(setf testes-totais (+ testes-totais testes))
-			(cond ((not cont)
-					(return-from mac (values NIL testes-totais))))
-			while (not (null lista-arcos))
-		)
-;		(loop for el in lista-arcos do
-;			(setf v2 (car el))
-;			(setf v1 (cdr el))
-;			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
-;			(setf revised (nth 0 valores))
-;			(setf testes (nth 1 valores))
-;			;(cond ((null testes) (setf testes 0)))
-;			(setf testes-totais (+ testes-totais testes))
-;			(cond (revised
-;					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
-;					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from mac (values NIL testes-totais))))
-;		
-;					(setf novos-arcos (arcos-vizinhos-nao-atribuidos psr v2))
-;					(print "original") (prin1 novos-arcos) 
-;					(print "vou remover") (prin1  (cons v1 v2))
-;					(setf novos-arcos (remove (cons v1 v2) novos-arcos :test #'equal))
-;					(print "pos remove") (prin1 novos-arcos) 
-					;(setf lista-arcos (append lista-arcos novos-arcos))
-					;(setf aux (multiple-value-bind (revised testes) (mac psr novos-arcos)(list revised testes)) )
-					;(setf aux-revised (nth 0 valores))
-					;(setf aux-testes (nth 1 valores))
-					;(cond ((null testes) (setf testes 0)))
-;					(setf testes-totais (+ testes-totais aux-testes))
-;					(print "pos append") (prin1 lista-arcos) 
-				
 		
-		(values inferencias testes-totais)
-	)
-)
-
-
-
-(defun iteracao (psr lista-arcos inferencias)
-	(let ((testes-totais 0) (testes 0) (revised NIL)(v1 NIL) 
-			(novos-arcos NIL)
-			(valores NIL)
-			(v2 NIL) 
-			;(aux 0)
-			(arcos NIL)
-			(lista lista-arcos)
-			(inferencia inferencias)
-			;(aux-testes 0)
-			;(aux-revised NIL)
-			(l_hash NIL))
-		(dolist (el lista)
-			(setf v2 (car el))
-			(setf v1 (cdr el))
-			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencia)(list revised testes)) )
+		(loop while lista-arcos do
+			(setf v2 (car (first lista-arcos)))
+			(setf v1 (cdr (first lista-arcos)))
+			(setf lista-arcos (rest lista-arcos))
+			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
 			(setf revised (nth 0 valores))
 			(setf testes (nth 1 valores))
 			;(cond ((null testes) (setf testes 0)))
 			(setf testes-totais (+ testes-totais testes))
 			(cond (revised
-				(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencia)(list value has-domain)))
-				(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from iteracao (values NIL inferencias testes-totais arcos))))
-				(setf novos-arcos (arcos-vizinhos-nao-atribuidos psr v2))
-;; 				(print "original") (prin1 novos-arcos) 
-;; 				(print "vou remover") (prin1  (cons v1 v2))
-				(setf novos-arcos (remove (cons v1 v2) novos-arcos :test 'equal))
-;; 				(print "pos remove") (prin1 novos-arcos) 
-				;(setf lista-arcos (append lista-arcos novos-arcos))
-				(setf arcos (append arcos novos-arcos))
-;; 				(print "pos append") (prin1 lista) )
+					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
+					(cond ((and (null (nth 0 l_hash)) (nth 1 l_hash)) (return-from mac (values NIL testes-totais))))
+		
+					(setf novos-arcos (arcos-vizinhos-nao-atribuidos psr v2))
+					(setf novos-arcos (remove (cons v1 v2) novos-arcos :test #'equal))
+					(setf lista-arcos (append lista-arcos novos-arcos))
+				)
 			)
-			
-		))
-				;(cond ((not(null novos-arcos))
-				;(setf aux (iteracao psr novos-arcos inferencias) )
-				;(cond ((null testes) (setf testes 0)))
-				;(setf testes-totais (+ testes-totais aux))))
-			(values T inferencias testes-totais arcos)
+		
+		)
+		
+		(values inferencias testes-totais)
 	)
 )
-
-
-;; (defun MAC(psr var)
-;; 	(let ((testesTotais 0) 
-;; 		   (inferencias (make-inferencia)) 
-;; 		   (lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
-;; 		   (aux NIL) 
-;; 		   (repeat NIL)
-;; 		 )
-;; 		(loop do
-;; 			(setf aux (multiple-value-list (ExpandsList psr lista-arcos inferencias)))
-;; 			(setf repeat(nth 0 aux))
-;; 			(setf testesTotais (+ testesTotais (nth 1 aux)))
-;; 			(setf lista-arcos (nth 2 aux))
-;; 			(setf inferencias (nth 3 aux))
-;; 			(if (not repeat)
-;; 				(return-from MAC (values nil testesTotais))
-;; 			)
-;; 			while(not (null lista-arcos))
-;; 		) 
-;; 		(values inferencias testesTotais)
-;; 	)
-;; )
-
-
-
 
 
 
