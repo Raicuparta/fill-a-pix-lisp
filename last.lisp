@@ -30,10 +30,10 @@
 
 
 
-(defstruct psr variables domains restrictions varsHash resHash )
+(defstruct psr variables domains restrictions varsHash resHash nVars)
 
 (defun cria-psr (vars doms restricoes)
-	(let ((dom_hash NIL) (var_hash NIL) (res_hash NIL))
+	(let ((dom_hash NIL) (var_hash NIL) (res_hash NIL) (n_vars 0))
 		(setf dom_hash (make-hash-table :test 'equal))
 		(setf var_hash (make-hash-table :test 'equal))
 		(setf res_hash (make-hash-table :test 'equal))
@@ -48,6 +48,8 @@
 				(setf (gethash el res_hash) (append (gethash el res_hash) (list r)))
 			)
 		)
+		
+		(setf n_vars (length vars))
 	
 		(make-psr 
 			:variables vars
@@ -55,6 +57,7 @@
 			:restrictions restricoes
 			:varsHash var_hash
 			:resHash res_hash 
+			:nVars n_vars
 		)
     )
 )
@@ -62,7 +65,6 @@
 
 
 (defun psr-atribuicoes (psr)
-	;;(mapcar #'cons (psr-atributionVar psr) (psr-atributionValue psr))
 	(let ((l_atribs NIL))
         (maphash #'(lambda (key val) 
             (setf l_atribs (cons (cons key val) l_atribs))) (psr-varsHash psr)
@@ -90,26 +92,10 @@
 )
 
 (defun psr-variavel-valor (psr var)
-	;;(let ((value NIL)
-	;;	(l-vals (psr-atributionValue psr)) 
-	;;	(l-vars (psr-atributionVar psr)))
-
-	;;(loop for var-atr in l-vars
-	;;	for val-atr in l-vals do
-	;;	(cond ((string= var var-atr) (setf value val-atr) (return 0)))
-	;;) value)
 	(nth-value 0 (gethash var (psr-varsHash psr)))
 )
 	
 (defun psr-variavel-dominio (psr var)
-	;(let ((domain NIL)
-	;	(l-vars (psr-variaveis-todas psr)) 
-	;	(l-doms (psr-domains psr)))
-	;	
-	;	(loop for v in l-vars
-	;	for dom in l-doms do
-	;		(cond ((string= var v) (setf domain dom) (return 0)))
-	;	) domain)
 	(nth-value 0 (gethash var (psr-domains psr)))
 )								
 
@@ -119,50 +105,21 @@
 )
 
 (defun psr-adiciona-atribuicao! (psr var value)
-	;;(let ( 
-	;;	(l-vars (psr-atributionVar psr))
-	;;	(l-vals (psr-atributionValue psr))
-	;;	(i 0)
-	;;	(j NIL))
-	;;	(dolist (v l-vars)
-	;;			(cond ((string= var v) (setf (nth i l-vals) value) (setf j T) (return 0))
-	;;				(T (incf i))))
-	;;
-	;;	(cond ((not j) (setf (psr-atributionVar psr) (append (psr-atributionVar psr) (list var))) 
-	;;					(setf (psr-atributionValue psr) (append (psr-atributionValue psr) (list value)))
-	;;					) ) NIL)
 	(setf (gethash var (psr-varsHash psr)) value)
 	
 )
 												
 (defun psr-remove-atribuicao! (psr var)
-	;;(let ( (l-vars (psr-atributionVar psr))
-	;;		(i 0))
-	;;		(dolist (v l-vars)
-	;;			(cond ((string= var v) (setf (psr-atributionVar psr) (remove-nth i (psr-atributionVar psr))) 
-	;;									(setf (psr-atributionValue psr)(remove-nth i (psr-atributionValue psr))))
-	;;				(T (incf i)))) NIL))
-
 	(remhash var (psr-varsHash psr))
 
 )
 							
 (defun psr-altera-dominio! (psr var dom)
-	;(let ((i 0)
-	;	(l-vars (psr-variaveis-todas psr))
-	;	(l-doms (psr-domains psr)))
-	;
-	;	(dolist (v l-vars)
-	;			(cond ((string= var v) (setf (nth i l-doms) dom) (return 0))
-	;				(T (incf i))))
-	;NIL)
 	(setf (gethash var (psr-domains psr)) dom)
 )				
 
 (defun psr-completo-p (psr)
-	;;(cond((= (list-length (psr-variaveis-todas psr)) (list-length (psr-atributionVar psr))) T )
-	;;	(T NIL))
-	(cond((= (list-length (psr-variaveis-todas psr)) (hash-table-count (psr-varsHash psr))) T )
+	(cond((= (psr-nVars psr) (hash-table-count (psr-varsHash psr))) T )
 		(T NIL))
 )
 
@@ -297,8 +254,6 @@
 ;###########################################################################					
 			
 (defun procura-retrocesso-simples (psr)
-	;;(print (psr-variaveis-nao-atribuidas psr))
-	;;(print (desenha-fill-a-pix (psr->fill-a-pix psr 3 3)))
 	(let ((var NIL) (r-testes 0) (retorno-atr NIL)
 	(testes 0) (testes-atr NIL) 
 	(consistente-atr NIL) 
@@ -334,12 +289,6 @@
 	(resultado NIL) (lista NIL))
 	(cond ( (psr-completo-p psr) (return-from procura-retrocesso-grau (values psr testes)))
 		  (T (setf var (variavel-maior-grau psr))  ))
-	;;(format T "var: ") (prin1 var)
-	;;(print (psr-variaveis-nao-atribuidas psr))
-	;;(print 0)
-	;;(desenha-fill-a-pix (psr->fill-a-pix psr 3 3))
-;; 	
-	;;(cond ( (null var) (print "oi") ))
 		  		
 	(dolist (val (psr-variavel-dominio psr var))
 		(setf retorno-atr (multiple-value-bind (resultado testes) (psr-atribuicao-consistente-p psr var val) (list resultado testes)))
@@ -373,7 +322,6 @@
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))
-			;(cond ((null teste) (setf teste 0)))
 			(setf testes-totais (+ testes-totais teste))
 			(cond (consistente
 					(psr-adiciona-atribuicao! psr var value)
@@ -382,7 +330,7 @@
 					(setf testes (nth 1 lista2))
 					(setf testes-totais (+ testes-totais testes))
 					
-					(cond (inferencias            ;(and (not (null inferencias)) (not (eq 0 (hash-table-count inferencias))))
+					(cond (inferencias 
 						   (setf backup-dominio (copia-dominio psr inferencias))
 						   (loop for key being the hash-keys of inferencias do
 								(psr-altera-dominio! psr key (gethash key inferencias)))
@@ -390,7 +338,6 @@
 						   (setf lista3 (multiple-value-bind (resultado testes2) (procura-retrocesso-fc-mrv psr)(list resultado testes2)) )
 						   (setf resultado (nth 0 lista3))
 						   (setf testes2 (nth 1 lista3))
-						   ;(cond ((null testes2) (setf testes2 0)))
 						   (setf testes-totais (+ testes-totais testes2))
 						   (cond (resultado
 									(return-from procura-retrocesso-fc-mrv (values resultado testes-totais))))
@@ -427,14 +374,6 @@
 		(setf newpsr (procura-retrocesso-MAC-mrv psr))
 		(setf newarr (psr->fill-a-pix newpsr (array-dimension arr 0)(array-dimension arr 1)))))
 
-;; (defun resolve-best (arr)
-;; 	(let ( (psr NIL) (newpsr NIL) (newarr NIL))
-;; 		(setf psr (fill-a-pix->psr arr ))
-;; 		(setf newpsr (procura-retrocesso-MAC-mrv psr))
-;; 		(setf newarr (psr->fill-a-pix newpsr (array-dimension arr 0)(array-dimension arr 1)))))
-;; 		
-		
-		
 		
 ;###########################################################################
 ;	FUNCOES AUXILIARES
@@ -563,7 +502,6 @@
 				(setf valores (multiple-value-bind (consistente testes) (psr-atribuicoes-consistentes-arco-p psr var1 d_value1 var2 d_value2)(list consistente testes)) )
 				(setf consistente (nth 0 valores))
 				(setf testes (nth 1 valores))
-				;(cond ((null testes) (setf testes 0)))
 				(setf testes-totais (+ testes-totais testes))
 				(cond (consistente (setf foundConsistentValue T) (return 0))))
 				
@@ -580,7 +518,6 @@
 (defun forward-checking (psr var)
 	(let ((lista-arcos NIL) (dominio-v2 NIL) (testes-totais 0) (inferencias NIL) (testes 0) (revised NIL)(v1 NIL) (valores NIL)(v2 NIL) )
 		(setf inferencias (make-hash-table :test 'equal))
-		;(setf (gethash var inferencias) ())
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
 		(dolist (el lista-arcos)
 			(setf v2 (car el))
@@ -588,11 +525,10 @@
 			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
 			(setf revised (nth 0 valores))
 			(setf testes (nth 1 valores))
-			;(cond ((null testes) (setf testes 0)))
 			(setf testes-totais (+ testes-totais testes))
 			(cond (revised
 					(setf dominio-v2 (gethash v2 inferencias))
-					(cond ((zerop (length dominio-v2)) (return-from forward-checking (values NIL testes-totais))))))
+					(cond ((null dominio-v2) (return-from forward-checking (values NIL testes-totais))))))
 		)
 		(values inferencias testes-totais)
 	)
@@ -632,7 +568,6 @@
 			(setf lista (multiple-value-bind (consistente teste) (psr-atribuicao-consistente-p psr var value)(list consistente teste)) )
 			(setf consistente (nth 0 lista))
 			(setf teste (nth 1 lista))
-			;(cond ((null teste) (setf teste 0)))
 			(setf testes-totais (+ testes-totais teste))
 			(cond (consistente
 					(psr-adiciona-atribuicao! psr var value)
@@ -641,7 +576,7 @@
 					(setf testes (nth 1 lista2))
 					(setf testes-totais (+ testes-totais testes))
 					
-					(cond ( (not (null inferencias))              ;(and (not (null inferencias)) (not (eq 0 (hash-table-count inferencias))))
+					(cond ( (not (null inferencias))
 						   (setf backup-dominio (copia-dominio psr inferencias))
 						   (loop for key being the hash-keys of inferencias do
 								(psr-altera-dominio! psr key (gethash key inferencias)))
@@ -665,7 +600,6 @@
 			(testes 0) (revised NIL)(v1 NIL) (novos-arcos NIL)
 			(valores NIL)(v2 NIL) (l_hash NIL))
 		(setf inferencias (make-hash-table :test 'equal))
-		;(setf (gethash var inferencias) ())
 		(setf lista-arcos (arcos-vizinhos-nao-atribuidos psr var))
 		
 		(loop while lista-arcos do
@@ -675,7 +609,6 @@
 			(setf valores (multiple-value-bind (revised testes) (revise psr v2 v1 inferencias)(list revised testes)) )
 			(setf revised (nth 0 valores))
 			(setf testes (nth 1 valores))
-			;(cond ((null testes) (setf testes 0)))
 			(setf testes-totais (+ testes-totais testes))
 			(cond (revised
 					(setf l_hash (multiple-value-bind (value has-domain) (gethash v2 inferencias)(list value has-domain)))
@@ -707,20 +640,17 @@
 			(setf nr_var (aref arr l c))
 			(cond ((eq nr_var 0) 
 						(dolist (adj (lista-adjacencias var linhas colunas))
-							(psr-adiciona-atribuicao! psr adj 0)
 							(psr-altera-dominio! psr adj (list 0))
 						)
 				  )
 				  ((eq nr_var 9) 
 						(dolist (adj (lista-adjacencias var linhas colunas))
-							(psr-adiciona-atribuicao! psr adj 1)
 							(psr-altera-dominio! psr adj (list 1))
 						)
 				  )
 				  ((eq nr_var 6) 
 						(cond ((or (eq c 0) (eq l 0) (eq c (1- colunas)) (eq l (1- linhas)))
 								(dolist (adj (lista-adjacencias var linhas colunas))
-									(psr-adiciona-atribuicao! psr adj 1)
 									(psr-altera-dominio! psr adj (list 1))
 								)
 							)
@@ -729,7 +659,6 @@
 				  ((eq nr_var 4) 
 						(cond ((or (and (eq c 0)(eq l 0)) (and (eq c (1- colunas)) (eq l (1- linhas))) (and (eq c 0)(eq l (1- linhas))) (and (eq c (1- colunas)) (eq l 0)))
 								(dolist (adj (lista-adjacencias var linhas colunas))
-									(psr-adiciona-atribuicao! psr adj 1)
 									(psr-altera-dominio! psr adj (list 1))
 								)
 							)
@@ -756,14 +685,12 @@
 					(setf pintados (conta-pintados psr l_adj))
 					(cond ( (and (not (eq (nth 1 pintados) 0)) (eq (nth 0 pintados) nr_var))
 							(dolist (v_nil (nth 2 pintados))
-								(psr-adiciona-atribuicao! psr v_nil 0)
 								(psr-altera-dominio! psr v_nil (list 0))
 							)
 						  )
 					)
 					(cond ( (and (not(eq (nth 1 pintados) 0)) (= (+(nth 1 pintados)(nth 0 pintados)) nr_var) )
 							(dolist (v_nil (nth 2 pintados))
-								(psr-adiciona-atribuicao! psr v_nil 1)
 								(psr-altera-dominio! psr v_nil (list 1))
 							)
 						  )
@@ -778,123 +705,22 @@
 			
 						
 (defun resolve-best (arr)
-	(let ( (psr NIL)#|(newpsr NIL)|##|(l_actual NIL)|##| (l_antiga NIL)|# (newarr NIL))
+	(let ( (psr NIL) (l_actual NIL) (l_antiga NIL) (newarr NIL))
 		(setf numero 0)
-		(setf psr (fill-a-pix->psr-melhor arr))
-		;(setf psr (preenche-tudo psr arr))
-;		(print (psr->fill-a-pix psr (array-dimension arr 0)(array-dimension arr 1)))
- 	;	(setf l_actual (psr-atribuicoes psr))
+		(setf psr (fill-a-pix->psr arr))
+		
+		(setf psr (preenche-tudo psr arr))
 
- ; 		(loop while (not (equal l_actual l_antiga)) do
- ;			(setf l_antiga (psr-atribuicoes psr))
- ;			(setf psr (preenche-resto psr arr))
- ;			(setf l_actual (psr-atribuicoes psr))
-		;;	(print (psr->fill-a-pix psr (array-dimension arr 0)(array-dimension arr 1)))
-
- ;		)
+  		(loop while (not (equal l_actual l_antiga)) do
+ 			(setf l_antiga (psr-atribuicoes psr))
+ 			(setf psr (preenche-resto psr arr))
+ 			(setf l_actual (psr-atribuicoes psr))
+ 		)
 
 		;(setf psr (preenche-resto psr arr))
-
-;		(print (psr->fill-a-pix psr (array-dimension arr 0)(array-dimension arr 1)))
 		(setf psr (procura-retrocesso-fc-mrv psr))
 
-		(setf newarr (psr->fill-a-pix psr (array-dimension arr 0)(array-dimension arr 1)))))
-
-
-
-(defun fill-a-pix->psr-melhor (arr)
-	(let (
-		(linhas (array-dimension arr 0))
-		(colunas (array-dimension arr  1))
-		(vars NIL)
-		;(dom NIL)
-		(pred NIL)
-		(restr NIL)
-		(l-adjacencias NIL)
-		(var_hash (make-hash-table :test 'equal))
-		(res_hash (make-hash-table :test 'equal))
-		(doms_hash (make-hash-table :test 'equal)) 
-		(restricoes NIL))
-		(dotimes (l linhas)
-			(dotimes (c colunas)
-				(let ((pos (concatenate 'string (write-to-string l) "_" (write-to-string c)))
-						(para-pintar (aref arr l c)))
-				(setf vars (append vars (list pos)))
-
-				(cond ( para-pintar 
-						(setf l-adjacencias (lista-adjacencias pos linhas colunas))
-						
-						(cond ((eq para-pintar 0) 
-								(dolist (adj l-adjacencias)
-									;(psr-adiciona-atribuicao! psr adj 0)
-									(setf (gethash adj doms_hash) (list 0))
-								)
-							)
-							((eq para-pintar 9) 
-									(dolist (adj l-adjacencias)
-										;(psr-adiciona-atribuicao! psr adj 1)
-										(setf (gethash adj doms_hash) (list 1))
-									)
-							)
-							((eq para-pintar 6) 
-									(cond ((or (eq c 0) (eq l 0) (eq c (1- colunas)) (eq l (1- linhas)))
-											(dolist (adj l-adjacencias)
-												;(psr-adiciona-atribuicao! psr adj 1)
-												(setf (gethash adj doms_hash) (list 1))
-											)
-										)
-										(T (setf (gethash pos doms_hash) (list 0 1)))
-									)
-							)
-							((eq para-pintar 4) 
-									(cond ((or (and (eq c 0)(eq l 0)) (and (eq c (1- colunas)) (eq l (1- linhas))) (and (eq c 0)(eq l (1- linhas))) (and (eq c (1- colunas)) (eq l 0)))
-											(dolist (adj l-adjacencias)
-												;(psr-adiciona-atribuicao! psr adj 1)
-												(setf (gethash adj doms_hash) (list 1))
-											)
-										)
-										(T (setf (gethash pos doms_hash) (list 0 1)))
-										
-									)
-							)
-							
-							( (null (gethash pos doms_hash)) (setf (gethash pos doms_hash) (list 0 1)))
-						)
-						(setf pred (cria-predicado para-pintar l-adjacencias))
-						(setf restr (cria-restricao l-adjacencias pred))
-						(dolist (adj l-adjacencias)  
-							(setf (gethash adj res_hash) (append (gethash adj res_hash) (list restr)))
-						)      
-						(setf restricoes (append restricoes (list (cria-restricao l-adjacencias pred))))
-						
-						
-						
-						
-;; 						(setf restricoes 
-;; 							(append restricoes 
-;; 								(list(cria-restricao 
-;; 									l-adjacencias
-;; 									pred)
-;; 								)
-;; 							)
-;; 						)
-				)
-				(T (setf restricoes (append restricoes NIL)) (if (null (gethash pos doms_hash)) (setf (gethash pos doms_hash) (list 0 1))))
-			)
-		)
-		)
-		)
-		(cria-psr-new vars doms_hash restricoes res_hash var_hash)
+		(setf newarr (psr->fill-a-pix psr (array-dimension arr 0)(array-dimension arr 1)))
 	)
-)
 
-
-(defun cria-psr-new (vars doms_hash restricoes res_hash var_hash)	
-		(make-psr 
-			:variables vars
-			:domains doms_hash
-			:restrictions restricoes
-			:varsHash var_hash
-			:resHash res_hash 
-		)
 )
